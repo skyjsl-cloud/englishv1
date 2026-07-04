@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>영어 학습 분석기</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #eef1fb; color: #1a1a2e; min-height: 100vh; padding-bottom: 60px; }
+  header { background: #1e3a8a; padding: 24px 20px 18px; text-align: center; }
+  header .icon { font-size: 32px; margin-bottom: 6px; }
+  header h1 { font-size: 22px; font-weight: 700; color: #fff; }
+  header p { font-size: 13px; color: #93b4f0; margin-top: 4px; }
+  .section { margin: 20px 16px 0; }
+  .section-title { font-size: 13px; font-weight: 700; color: #1e3a8a; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 9px; padding-left: 4px; }
+  .input-box { background: #fff; border-radius: 16px; border: 1.5px solid #c7d2f0; }
+  textarea { width: 100%; min-height: 160px; border: none; background: transparent; font-size: 16px; color: #1a1a2e; outline: none; resize: none; padding: 16px; font-family: inherit; line-height: 1.8; }
+  textarea::placeholder { color: #aab4d8; font-size: 15px; }
+  .char-count { text-align: right; font-size: 12px; color: #aab4d8; padding: 0 16px 12px; }
+  .btn-row { display: flex; gap: 10px; margin: 14px 16px 0; }
+  .btn-analyze { flex: 1; background: #1e3a8a; color: #fff; border: none; border-radius: 16px; padding: 17px; font-size: 17px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .btn-analyze:active { opacity: 0.82; transform: scale(0.98); }
+  .btn-clear { background: #fff; color: #7788bb; border: 1.5px solid #c7d2f0; border-radius: 16px; padding: 17px 20px; font-size: 16px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .loading { text-align: center; padding: 52px 20px; color: #5566aa; font-size: 16px; }
+  .spinner { display: inline-block; width: 22px; height: 22px; border: 2.5px solid #d0d8f0; border-top-color: #1e3a8a; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .result-wrap { margin: 20px 16px 0; }
+  .result-title { font-size: 13px; font-weight: 700; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; padding-left: 4px; }
+  .sentence-card { background: #fff; border-radius: 18px; border: 1.5px solid #c7d2f0; margin-bottom: 16px; overflow: hidden; }
+  .card-header { background: #1e3a8a; padding: 10px 16px; }
+  .sentence-num { color: #fff; font-size: 13px; font-weight: 700; letter-spacing: 0.03em; }
+  .card-body { padding: 16px; }
+  .eng-label { font-size: 11px; font-weight: 700; color: #7788bb; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
+  .sentence-eng { font-size: 16px; color: #1a1a2e; line-height: 1.8; font-weight: 600; margin-bottom: 14px; padding: 12px 14px; background: #f5f7ff; border-radius: 12px; border-left: 4px solid #1e3a8a; }
+  .kor-label { font-size: 11px; font-weight: 700; color: #7788bb; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
+  .sentence-kor { font-size: 15px; color: #2a3a6a; line-height: 1.8; padding: 12px 14px; background: #eef2ff; border-radius: 12px; border-left: 4px solid #6688dd; margin-bottom: 14px; }
+  .divider { height: 1px; background: #e8eeff; margin: 14px 0; }
+  .sub-label { font-size: 12px; font-weight: 700; color: #5566aa; letter-spacing: 0.04em; margin-bottom: 9px; }
+  .vocab-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+  .vocab-item { background: #eef2ff; border-radius: 12px; padding: 10px 14px; border-left: 3px solid #4466cc; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .vocab-word { font-size: 15px; font-weight: 700; color: #1e3a8a; display: flex; justify-content: space-between; align-items: center; }
+  .vocab-arrow { font-size: 12px; color: #6688cc; transition: transform 0.2s; }
+  .vocab-arrow.open { transform: rotate(180deg); }
+  .vocab-meaning { font-size: 13px; color: #445588; line-height: 1.6; margin-top: 6px; display: none; padding-top: 6px; border-top: 1px solid #c8d4f0; }
+  .vocab-meaning.open { display: block; }
+  .grammar-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+  .grammar-item { background: #fffbee; border-radius: 12px; padding: 10px 14px; border-left: 3px solid #cc9922; }
+  .grammar-pattern { font-size: 15px; font-weight: 700; color: #7a4f00; margin-bottom: 3px; }
+  .grammar-explanation { font-size: 13px; color: #6a4400; line-height: 1.6; }
+  .error-box { background: #fff0f0; color: #b03030; border-radius: 14px; border: 1.5px solid #ffc0c0; padding: 14px 16px; font-size: 15px; margin: 20px 16px 0; line-height: 1.6; }
+  .word-span { cursor: pointer; border-bottom: 1.5px dotted #4466cc; color: #1e3a8a; -webkit-tap-highlight-color: transparent; }
+  .word-span.has-meaning { background: #e8eeff; border-radius: 4px; padding: 1px 2px; }
+  .popup-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 999; }
+  .popup-overlay.show { display: block; }
+  .popup-box { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-radius: 20px 20px 0 0; padding: 20px; box-shadow: 0 -4px 24px rgba(0,0,0,0.15); z-index: 1000; transform: translateY(100%); transition: transform 0.25s ease; }
+  .popup-box.show { transform: translateY(0); }
+  .popup-word { font-size: 22px; font-weight: 700; color: #1e3a8a; margin-bottom: 6px; }
+  .popup-meaning { font-size: 16px; color: #2a3a6a; line-height: 1.7; margin-bottom: 4px; }
+  .popup-desc { font-size: 14px; color: #5566aa; line-height: 1.6; }
+  .popup-close { position: absolute; top: 16px; right: 20px; font-size: 22px; color: #8899cc; cursor: pointer; }
+  .popup-nodic { font-size: 14px; color: #8899cc; font-style: italic; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="icon">📖</div>
+  <h1>영어 학습 분석기</h1>
+  <p>영어 문장 → 번역 + 어휘 + 문법 한번에</p>
+</header>
+
+<div style="display:none"><input type="password" id="apiKey" value="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" /></div>
+
+<div class="section">
+  <div class="section-title">📝 영어 입력</div>
+  <div class="input-box">
+    <textarea id="inputText"
+      placeholder="웹페이지에서 복사한 영어 문장을 붙여넣으세요.
+
+예) Scientists have spent more than 15 years researching some of the deepest parts of the world's oceans."
+      oninput="updateCount()"></textarea>
+    <div class="char-count" id="charCount">0자</div>
+  </div>
+</div>
+
+<div class="btn-row">
+  <button class="btn-analyze" onclick="analyze()">🔍 분석하기</button>
+  <button class="btn-clear" onclick="clearAll()">지우기</button>
+</div>
+
+<div id="resultArea"></div>
+
+<script>
+function updateCount() {
+  document.getElementById('charCount').textContent = document.getElementById('inputText').value.length + '자';
+}
+
+async function analyze() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const text = document.getElementById('inputText').value.trim();
+  const ra = document.getElementById('resultArea');
+
+  if (!apiKey || apiKey === '여기에_API_키_입력') {
+    ra.innerHTML = '<div class="error-box">⚠️ API 키가 설정되지 않았습니다.</div>';
+    return;
+  }
+  if (!text) {
+    ra.innerHTML = '<div class="error-box">⚠️ 분석할 영어 문장을 입력해주세요.</div>';
+    return;
+  }
+
+  ra.innerHTML = '<div class="loading"><span class="spinner"></span>AI가 분석 중입니다...</div>';
+
+  const prompt = `You are an English learning assistant for Korean students.
+IMPORTANT: Respond with ONLY a valid JSON object. No explanation, no markdown, no text before or after JSON.
+ALL meanings must be in Korean (한국어) only.
+
+Return this exact JSON:
+{"sentences":[{"english":"sentence","korean":"번역","vocab":[{"word":"word","meaning":"뜻 — 설명"}],"grammar":[{"pattern":"pattern","explanation":"설명"}],"all_words":{"english_word":"한국어뜻","english_word2":"한국어뜻2"}}]}
+
+CRITICAL - all_words field:
+- List EVERY word that appears in the English sentence as a key
+- Value = short Korean meaning (1-4 words)
+- Include ALL words: nouns, verbs, adjectives, adverbs, prepositions, conjunctions
+- Example: {"despite":"~에도 불구하고","costly":"비싼","war":"전쟁","against":"~에 맞서","strongest":"가장 강한","militaries":"군대","crushing":"압도적인","economic":"경제적","hardship":"어려움"}
+- Use lowercase keys matching exact words in the sentence
+
+vocab: B2+ difficult words only with detailed explanation
+grammar: 0-2 complex points only
+
+Text to analyze:
+${text}`;
+
+  try {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 2000,
+        temperature: 0.1,
+        response_format: { type: 'json_object' },
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await resp.json();
+
+    if (data.error) {
+      ra.innerHTML = '<div class="error-box">⚠️ ' + esc(data.error.message) + '</div>';
+      return;
+    }
+
+    const parsed = JSON.parse(data.choices[0].message.content);
+    renderResults(parsed.sentences);
+
+  } catch(e) {
+    ra.innerHTML = '<div class="error-box">⚠️ 오류: ' + esc(e.message) + '</div>';
+  }
+}
+
+function renderResults(sentences) {
+  const ra = document.getElementById('resultArea');
+  if (!sentences || sentences.length === 0) {
+    ra.innerHTML = '<div class="error-box">분석 결과가 없습니다.</div>';
+    return;
+  }
+
+  let html = '<div class="result-wrap"><div class="result-title">📊 분석 결과 — ' + sentences.length + '문장</div>';
+
+  sentences.forEach(function(s, i) {
+    html += '<div class="sentence-card"><div class="card-header"><span class="sentence-num">문장 ' + (i+1) + '</span></div><div class="card-body">';
+    html += '<div class="eng-label">English</div>';
+    html += '<div class="sentence-eng">' + makeClickable(s.english, s.vocab || [], s.all_words || {}, i) + '</div>';
+    html += '<div class="kor-label">한국어 번역</div>';
+    html += '<div class="sentence-kor">' + esc(s.korean) + '</div>';
+
+    if (s.vocab && s.vocab.length > 0) {
+      html += '<div class="divider"></div><div class="sub-label">📌 어휘 (Vocabulary)</div><div class="vocab-list">';
+      s.vocab.forEach(function(v, vi) {
+        var parts = v.meaning.split('—');
+        var m = parts[0] ? esc(parts[0].trim()) : '';
+        var d = parts[1] ? esc(parts[1].trim()) : '';
+        var vid = 'vocab-' + i + '-' + vi;
+        html += '<div class="vocab-item" onclick="toggleVocab(\'' + vid + '\')">';
+        html += '<div class="vocab-word">' + esc(v.word) + ' — ' + m + '<span class="vocab-arrow" id="arr-' + vid + '">▼</span></div>';
+        if (d) html += '<div class="vocab-meaning" id="' + vid + '">' + d + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    if (s.grammar && s.grammar.length > 0) {
+      html += '<div class="divider"></div><div class="sub-label">📖 문법 (Grammar)</div><div class="grammar-list">';
+      s.grammar.forEach(function(g) {
+        html += '<div class="grammar-item"><div class="grammar-pattern">' + esc(g.pattern) + '</div><div class="grammar-explanation">' + esc(g.explanation) + '</div></div>';
+      });
+      html += '</div>';
+    }
+
+    html += '</div></div>';
+  });
+
+  html += '</div>';
+  ra.innerHTML = html;
+  document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Global word store to avoid quote issues in onclick
+var wordStore = {};
+var wordStoreIdx = 0;
+
+function stemWord(w) {
+  w = w.toLowerCase();
+  if (w.length < 4) return w;
+  if (w.endsWith('ing')) return w.slice(0, -3);
+  if (w.endsWith('tion') || w.endsWith('sion')) return w.slice(0, -4);
+  if (w.endsWith('ness') || w.endsWith('ment') || w.endsWith('less')) return w.slice(0, -4);
+  if (w.endsWith('able') || w.endsWith('ible')) return w.slice(0, -4);
+  if (w.endsWith('ful') || w.endsWith('ous') || w.endsWith('ive') || w.endsWith('ary')) return w.slice(0, -3);
+  if (w.endsWith('ed')) return w.slice(0, -2);
+  if (w.endsWith('er') || w.endsWith('ly')) return w.slice(0, -2);
+  if (w.endsWith('es') || w.endsWith('rs') || w.endsWith('ts')) return w.slice(0, -1);
+  if (w.endsWith('s') && w.length > 4) return w.slice(0, -1);
+  return w;
+}
+
+function findVocab(token, vocabMap) {
+  var clean = token.replace(/[^a-zA-Z]/g, '').toLowerCase();
+  if (!clean) return null;
+  if (vocabMap[clean]) return vocabMap[clean];
+  var stem = stemWord(clean);
+  if (vocabMap[stem]) return vocabMap[stem];
+  // try matching vocab stems against token stem
+  var keys = Object.keys(vocabMap);
+  for (var i = 0; i < keys.length; i++) {
+    if (stemWord(keys[i]) === stem) return vocabMap[keys[i]];
+    if (keys[i].startsWith(stem) || clean.startsWith(stemWord(keys[i]))) return vocabMap[keys[i]];
+  }
+  return null;
+}
+
+function makeClickable(sentence, vocabList, allWords, sentIdx) {
+  // vocabMap: detailed vocab (B2+)
+  var vocabMap = {};
+  vocabList.forEach(function(v) {
+    vocabMap[v.word.toLowerCase()] = v;
+  });
+  // allWordsMap: every content word with short meaning
+  var allWordsMap = allWords || {};
+
+  var result = '';
+  var tokens = sentence.split(/(\s+|[.,!?;:"()\-]+)/);
+  tokens.forEach(function(token) {
+    if (!token) return;
+    var clean = token.replace(/[^a-zA-Z]/g, '').toLowerCase();
+    if (!clean) { result += esc(token); return; }
+
+    // 1) Check detailed vocab first
+    var v = findVocab(token, vocabMap);
+    if (v) {
+      var parts = v.meaning.split('—');
+      var m = parts[0] ? parts[0].trim() : '';
+      var d = parts[1] ? parts[1].trim() : '';
+      var idx = wordStoreIdx++;
+      wordStore[idx] = { word: v.word, meaning: m, desc: d, isVocab: true };
+      result += '<span class="word-span has-meaning" onclick="showPopupIdx(' + idx + ')">' + esc(token) + '</span>';
+      return;
+    }
+
+    // 2) Check all_words map (stem matching)
+    var meaning = allWordsMap[clean] || allWordsMap[stemWord(clean)];
+    if (!meaning) {
+      // try matching stems of allWords keys
+      var awKeys = Object.keys(allWordsMap);
+      for (var k = 0; k < awKeys.length; k++) {
+        if (stemWord(awKeys[k]) === stemWord(clean)) {
+          meaning = allWordsMap[awKeys[k]];
+          break;
+        }
+      }
+    }
+    var idx = wordStoreIdx++;
+    wordStore[idx] = { word: token, meaning: meaning || '', desc: '', isVocab: false };
+    result += '<span class="word-span' + (meaning ? ' has-meaning' : '') + '" onclick="showPopupIdx(' + idx + ')">' + esc(token) + '</span>';
+  });
+  return result;
+}
+
+function showPopupIdx(idx) {
+  var d = wordStore[idx];
+  if (!d) return;
+  document.getElementById('popupWord').textContent = d.word;
+  if (d.meaning) {
+    document.getElementById('popupMeaning').textContent = d.meaning;
+    document.getElementById('popupDesc').textContent = d.desc || '';
+    if (d.isVocab) {
+      document.getElementById('popupWord').style.color = '#1e3a8a';
+    } else {
+      document.getElementById('popupWord').style.color = '#3a3a5a';
+    }
+  } else {
+    document.getElementById('popupMeaning').innerHTML = '<span class="popup-nodic">기본 단어이거나 분석되지 않은 단어예요</span>';
+    document.getElementById('popupDesc').textContent = '';
+    document.getElementById('popupWord').style.color = '#8899cc';
+  }
+  document.getElementById('popupOverlay').classList.add('show');
+  document.getElementById('popupBox').classList.add('show');
+}
+
+function showPopup(word, meaning, desc) {
+  document.getElementById('popupWord').textContent = word;
+  if (meaning) {
+    document.getElementById('popupMeaning').textContent = meaning;
+    document.getElementById('popupDesc').textContent = desc || '';
+  } else {
+    document.getElementById('popupMeaning').innerHTML = '<span class="popup-nodic">사전에 등록되지 않은 단어예요</span>';
+    document.getElementById('popupDesc').textContent = '';
+  }
+  document.getElementById('popupOverlay').classList.add('show');
+  document.getElementById('popupBox').classList.add('show');
+}
+
+function closePopup() {
+  document.getElementById('popupOverlay').classList.remove('show');
+  document.getElementById('popupBox').classList.remove('show');
+}
+
+function toggleVocab(id) {
+  var el = document.getElementById(id);
+  var arr = document.getElementById('arr-' + id);
+  if (!el) return;
+  el.classList.toggle('open');
+  if (arr) arr.classList.toggle('open');
+}
+
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function clearAll() {
+  document.getElementById('inputText').value = '';
+  document.getElementById('resultArea').innerHTML = '';
+  document.getElementById('charCount').textContent = '0자';
+}
+</script>
+<div class="popup-overlay" id="popupOverlay" onclick="closePopup()"></div>
+<div class="popup-box" id="popupBox">
+  <span class="popup-close" onclick="closePopup()">✕</span>
+  <div class="popup-word" id="popupWord"></div>
+  <div class="popup-meaning" id="popupMeaning"></div>
+  <div class="popup-desc" id="popupDesc"></div>
+</div>
+</body>
+</html>
